@@ -11,3 +11,8 @@ build/
 coverage/
 .DS_Store
 Thumbs.db
+
+# Flutter (reglas estándar)
+**/doc/api/
+app.*.symbols
+app.*.map.json
