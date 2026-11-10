@@ -12,7 +12,7 @@ coverage/
 .DS_Store
 Thumbs.db
 
-# Flutter (reglas est·ndar)
+# Flutter (reglas est√°ndar)
 **/doc/api/
 app.*.symbols
 app.*.map.json
