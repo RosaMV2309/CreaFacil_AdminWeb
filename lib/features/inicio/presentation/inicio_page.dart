@@ -6,14 +6,19 @@ import '../../../core/design_system/cf_components.dart';
 import '../../../core/router/rutas.dart';
 import '../../../core/widgets/cf_logo.dart';
 import '../../../core/widgets/responsive_layout.dart';
+import '../../estado_api/presentation/estado_api_tarjeta.dart';
 
-/// Pantalla de bienvenida provisional del panel con la identidad visual de
-/// CreaFácil: cabecera con la ilustración y el logotipo completo destacado.
-/// Todavía no consulta la API (eso llega en la subfase 0.8).
+/// Inicio (dashboard) del panel administrativo: logotipo, accesos y el
+/// estado de la conexión con la API [RNF-04][RNF-05].
+///
+/// Se muestra dentro del `AdminShell`, que pone el encabezado y el menú.
 class InicioPage extends StatelessWidget {
   const InicioPage({super.key});
 
   static const subtitulo = 'Panel administrativo';
+
+  /// Clave de la tarjeta de bienvenida (la del logotipo).
+  static const claveBienvenida = ValueKey('inicio-bienvenida');
 
   /// Lado del logotipo completo según el tamaño de pantalla [RNF-05].
   static double tamanoLogo(TamanoPantalla tamano) => switch (tamano) {
@@ -29,67 +34,58 @@ class InicioPage extends StatelessWidget {
     final tamano = PuntosCorte.deContexto(context);
     final movil = tamano == TamanoPantalla.movil;
 
-    return Scaffold(
-      // Cabecera del panel con la marca de CreaFácil.
-      appBar: AppBar(title: const CfMarcaEncabezado()),
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: EdgeInsets.all(
-              movil ? tokens.espacioLg : tokens.espacioXl,
-            ),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 520),
-              child: CfCard(
-                padding: EdgeInsets.all(
-                  movil ? tokens.espacioXl : tokens.espacioXxl,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CfLogo(size: tamanoLogo(tamano)),
-                    SizedBox(height: tokens.espacioLg),
-                    Text(
-                      subtitulo,
-                      textAlign: TextAlign.center,
-                      style: textos.bodyLarge,
-                    ),
-                    SizedBox(height: tokens.espacioXl),
-                    CfButton(
-                      label: 'Gestionar el catálogo',
-                      icon: Icons.inventory_2_outlined,
-                      expanded: movil,
-                      onPressed: () => _avisoProximamente(context),
-                    ),
-                    if (kDebugMode) ...[
-                      SizedBox(height: tokens.espacioSm),
-                      CfButton(
-                        label: 'Ver componentes',
-                        variant: CfButtonVariant.text,
-                        icon: Icons.widgets_outlined,
-                        tooltip: 'Solo en modo desarrollo',
-                        onPressed: () => context.push(Rutas.componentes),
+    return SafeArea(
+      child: Center(
+        child: SingleChildScrollView(
+          padding: EdgeInsets.all(movil ? tokens.espacioLg : tokens.espacioXl),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                CfCard(
+                  key: claveBienvenida,
+                  padding: EdgeInsets.all(
+                    movil ? tokens.espacioXl : tokens.espacioXxl,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CfLogo(size: tamanoLogo(tamano)),
+                      SizedBox(height: tokens.espacioLg),
+                      Text(
+                        subtitulo,
+                        textAlign: TextAlign.center,
+                        style: textos.bodyLarge,
                       ),
+                      SizedBox(height: tokens.espacioXl),
+                      CfButton(
+                        label: 'Gestionar el catálogo',
+                        icon: Icons.inventory_2_outlined,
+                        expanded: movil,
+                        onPressed: () => context.go(Rutas.catalogo),
+                      ),
+                      if (kDebugMode) ...[
+                        SizedBox(height: tokens.espacioSm),
+                        CfButton(
+                          label: 'Ver componentes',
+                          variant: CfButtonVariant.text,
+                          icon: Icons.widgets_outlined,
+                          tooltip: 'Solo en modo desarrollo',
+                          onPressed: () => context.push(Rutas.componentes),
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
-              ),
+                SizedBox(height: tokens.espacioLg),
+                const EstadoApiTarjeta(),
+              ],
             ),
           ),
         ),
       ),
     );
-  }
-
-  void _avisoProximamente(BuildContext context) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        const SnackBar(
-          content: Text(
-            'La gestión del catálogo estará disponible muy pronto.',
-          ),
-        ),
-      );
   }
 }

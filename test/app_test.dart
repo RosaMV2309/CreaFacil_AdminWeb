@@ -1,17 +1,24 @@
 import 'package:creafacil_admin/app.dart';
-import 'package:creafacil_admin/core/design_system/cf_components.dart';
 import 'package:creafacil_admin/core/widgets/cf_logo.dart';
 import 'package:creafacil_admin/core/widgets/responsive_layout.dart';
+import 'package:creafacil_admin/features/estado_api/presentation/estado_api_tarjeta.dart';
 import 'package:creafacil_admin/features/inicio/presentation/inicio_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'helpers/api_falsa.dart';
 import 'helpers/envolver.dart';
+
+/// El panel con la API simulada «conectada» (las pruebas no usan la red).
+Widget appDePrueba() =>
+    ProviderScope(overrides: apiConectada(), child: const CreaFacilAdminApp());
+
+final tarjetaBienvenida = find.byKey(InicioPage.claveBienvenida);
 
 void main() {
   testWidgets('muestra el inicio del panel administrativo', (tester) async {
-    await tester.pumpWidget(const ProviderScope(child: CreaFacilAdminApp()));
+    await tester.pumpWidget(appDePrueba());
     await tester.pumpAndSettle();
 
     expect(find.text('Panel administrativo'), findsOneWidget);
@@ -20,11 +27,11 @@ void main() {
   testWidgets('la bienvenida muestra el logotipo completo de CreaFácil', (
     tester,
   ) async {
-    await tester.pumpWidget(const ProviderScope(child: CreaFacilAdminApp()));
+    await tester.pumpWidget(appDePrueba());
     await tester.pumpAndSettle();
 
     final enTarjeta = find.descendant(
-      of: find.byType(CfCard),
+      of: tarjetaBienvenida,
       matching: find.byType(CfLogo),
     );
     expect(enTarjeta, findsOneWidget);
@@ -38,7 +45,7 @@ void main() {
   testWidgets('la cabecera del panel muestra la ilustración y «CreaFácil»', (
     tester,
   ) async {
-    await tester.pumpWidget(const ProviderScope(child: CreaFacilAdminApp()));
+    await tester.pumpWidget(appDePrueba());
     await tester.pumpAndSettle();
 
     final encabezado = find.descendant(
@@ -57,23 +64,28 @@ void main() {
     );
   });
 
-  testWidgets('el botón de prueba del inicio avisa que llega pronto', (
+  testWidgets('el dashboard muestra el estado de la API', (tester) async {
+    await tester.pumpWidget(appDePrueba());
+    await tester.pumpAndSettle();
+
+    expect(find.byType(EstadoApiTarjeta), findsOneWidget);
+    expect(find.text(EstadoApiTarjeta.textoConectado), findsOneWidget);
+  });
+
+  testWidgets('«Gestionar el catálogo» abre la sección Catálogo', (
     tester,
   ) async {
-    await tester.pumpWidget(const ProviderScope(child: CreaFacilAdminApp()));
+    await tester.pumpWidget(appDePrueba());
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Gestionar el catálogo'));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
-    expect(
-      find.text('La gestión del catálogo estará disponible muy pronto.'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('Disponible en la Fase 2.'), findsOneWidget);
   });
 
   testWidgets('en modo debug abre el catálogo de componentes', (tester) async {
-    await tester.pumpWidget(const ProviderScope(child: CreaFacilAdminApp()));
+    await tester.pumpWidget(appDePrueba());
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Ver componentes'));
@@ -90,17 +102,22 @@ void main() {
     ) async {
       fijarVentana(tester, ancho);
 
-      await tester.pumpWidget(const ProviderScope(child: CreaFacilAdminApp()));
+      await tester.pumpWidget(appDePrueba());
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
-      final tarjeta = tester.getRect(find.byType(CfCard));
-      expect(tarjeta.left, greaterThanOrEqualTo(0));
-      expect(tarjeta.right, lessThanOrEqualTo(ancho));
+      for (final tarjeta in [
+        tester.getRect(tarjetaBienvenida),
+        tester.getRect(find.byType(EstadoApiTarjeta)),
+      ]) {
+        expect(tarjeta.left, greaterThanOrEqualTo(0));
+        expect(tarjeta.right, lessThanOrEqualTo(ancho));
+      }
 
       // El logotipo completo cabe en la tarjeta y cambia de tamaño.
+      final tarjeta = tester.getRect(tarjetaBienvenida);
       final logo = tester.getRect(
-        find.descendant(of: find.byType(CfCard), matching: find.byType(CfLogo)),
+        find.descendant(of: tarjetaBienvenida, matching: find.byType(CfLogo)),
       );
       expect(logo.left, greaterThanOrEqualTo(tarjeta.left));
       expect(logo.right, lessThanOrEqualTo(tarjeta.right));
