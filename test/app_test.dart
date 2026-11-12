@@ -24,6 +24,20 @@ void main() {
     expect(find.text('Panel administrativo'), findsOneWidget);
   });
 
+  testWidgets('el panel acepta una clave propia', (tester) async {
+    final clave = UniqueKey();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: apiConectada(),
+        child: CreaFacilAdminApp(key: clave),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(clave), findsOneWidget);
+    expect(find.text('Panel administrativo'), findsOneWidget);
+  });
+
   testWidgets('la bienvenida muestra el logotipo completo de CreaFácil', (
     tester,
   ) async {
