@@ -52,6 +52,16 @@ void main() {
       );
     });
 
+    test('una sesión creada con el rol leído en ejecución', () {
+      // Rol que en la Fase 1 llegará de la API (no es una constante).
+      final rol = RolUsuario.values.byName('admin');
+      final sesion = SesionPanel(rol: rol);
+
+      expect(sesion.iniciada, isTrue);
+      expect(sesion.esAdmin, isTrue);
+      expect(redirigir(sesion, Rutas.inicio), isNull);
+    });
+
     test('la propia ruta de acceso no se redirige', () {
       expect(redirigir(const SesionPanel.sinSesion(), Rutas.acceso), isNull);
     });
