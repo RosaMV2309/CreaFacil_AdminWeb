@@ -1,69 +1,79 @@
 import 'package:creafacil_admin/core/router/guardia_sesion.dart';
 import 'package:creafacil_admin/core/router/rutas.dart';
+import 'package:creafacil_admin/features/autenticacion/presentation/estado_sesion.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../helpers/sesion_falsa.dart';
+
 void main() {
-  test('Fase 0: la protección está desactivada y deja pasar', () {
-    expect(proteccionPorRolActiva, isFalse);
+  const sinSesion = AsyncData(EstadoSesion());
+  final admin = AsyncData(EstadoSesion(sesion: sesionPrueba()));
+  final cliente = AsyncData(
+    EstadoSesion(sesion: sesionPrueba(usuario: clientePrueba)),
+  );
+  const cargando = AsyncLoading<EstadoSesion>();
+
+  String? redirigir(AsyncValue<EstadoSesion> estado, String ruta) =>
+      redireccionPorSesion(estado: estado, uri: Uri.parse(ruta));
+
+  test('Fase 1: la protección por rol está ACTIVA', () {
+    expect(proteccionPorRolActiva, isTrue);
+  });
+
+  test('desactivada deja pasar (solo para depurar)', () {
     expect(
       redireccionPorSesion(
-        sesion: const SesionPanel.sinSesion(),
-        ubicacion: Rutas.agenda,
+        estado: sinSesion,
+        uri: Uri.parse(Rutas.agenda),
+        activa: false,
       ),
       isNull,
     );
   });
 
-  test('la sesión de la Fase 0 es «sin sesión»', () {
-    final contenedor = ProviderContainer();
-    addTearDown(contenedor.dispose);
-    final sesion = contenedor.read(sesionPanelProvider);
-    expect(sesion.iniciada, isFalse);
-    expect(sesion.esAdmin, isFalse);
+  test('sin sesión, todas las rutas del panel van a /acceso', () {
+    expect(redirigir(sinSesion, Rutas.inicio), Rutas.acceso);
+    for (final ruta in [
+      Rutas.catalogo,
+      Rutas.precios,
+      Rutas.cotizaciones,
+      Rutas.pedidos,
+      Rutas.agenda,
+      Rutas.reportes,
+    ]) {
+      expect(redirigir(sinSesion, ruta), Rutas.accesoDesde(ruta), reason: ruta);
+    }
   });
 
-  group('activada (esqueleto para la Fase 1)', () {
-    String? redirigir(SesionPanel sesion, String ubicacion) =>
-        redireccionPorSesion(
-          sesion: sesion,
-          ubicacion: ubicacion,
-          activa: true,
-        );
+  test('mientras se restaura la sesión, se espera en /acceso', () {
+    expect(redirigir(cargando, Rutas.agenda), '/acceso?desde=%2Fagenda');
+    expect(redirigir(cargando, Rutas.acceso), isNull);
+  });
 
-    test('sin sesión → inicio de sesión', () {
-      expect(
-        redirigir(const SesionPanel.sinSesion(), Rutas.inicio),
-        Rutas.acceso,
-      );
-    });
+  test('rol CLIENTE → /acceso (RN-05)', () {
+    expect(redirigir(cliente, Rutas.reportes), '/acceso?desde=%2Freportes');
+    expect(redirigir(cliente, Rutas.acceso), isNull);
+  });
 
-    test('rol CLIENTE → inicio de sesión (RN-05)', () {
-      expect(
-        redirigir(const SesionPanel(rol: RolUsuario.cliente), Rutas.reportes),
-        Rutas.acceso,
-      );
-    });
+  test('rol ADMIN → continúa; /acceso lleva al destino o a Inicio', () {
+    expect(redirigir(admin, Rutas.reportes), isNull);
+    expect(redirigir(admin, Rutas.inicio), isNull);
+    expect(redirigir(admin, Rutas.acceso), Rutas.inicio);
+    expect(redirigir(admin, '/acceso?desde=%2Fagenda'), Rutas.agenda);
+  });
 
-    test('rol ADMIN → continúa', () {
-      expect(
-        redirigir(const SesionPanel(rol: RolUsuario.admin), Rutas.reportes),
-        isNull,
-      );
-    });
+  test('el catálogo de componentes (debug) no se protege', () {
+    expect(redirigir(sinSesion, Rutas.componentes), isNull);
+  });
 
-    test('una sesión creada con el rol leído en ejecución', () {
-      // Rol que en la Fase 1 llegará de la API (no es una constante).
-      final rol = RolUsuario.values.byName('admin');
-      final sesion = SesionPanel(rol: rol);
-
-      expect(sesion.iniciada, isTrue);
-      expect(sesion.esAdmin, isTrue);
-      expect(redirigir(sesion, Rutas.inicio), isNull);
-    });
-
-    test('la propia ruta de acceso no se redirige', () {
-      expect(redirigir(const SesionPanel.sinSesion(), Rutas.acceso), isNull);
-    });
+  test('destinoSeguro solo acepta rutas internas', () {
+    expect(destinoSeguro(null), isNull);
+    expect(destinoSeguro('https://malo.com'), isNull);
+    expect(destinoSeguro('//malo.com'), isNull);
+    expect(destinoSeguro(r'/\malo.com'), isNull);
+    expect(destinoSeguro(Rutas.acceso), isNull);
+    expect(destinoSeguro(Rutas.agenda), Rutas.agenda);
+    expect(Rutas.accesoDesde(null), Rutas.acceso);
   });
 }

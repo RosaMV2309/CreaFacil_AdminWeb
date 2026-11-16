@@ -10,19 +10,28 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../../helpers/api_falsa.dart';
 import '../../helpers/envolver.dart';
+import '../../helpers/sesion_falsa.dart';
 
+/// Monta el panel con la API «conectada» y una sesión ADMIN guardada (la
+/// guardia por rol está activa desde la Fase 1).
 Future<ProviderContainer> montarPanel(WidgetTester tester, double ancho) async {
   fijarVentana(tester, ancho);
-  final contenedor = ProviderContainer(overrides: apiConectada());
-  addTearDown(contenedor.dispose);
+  // ProviderScope (y no un contenedor externo): se libera al desmontar el
+  // árbol, antes de que la prueba compruebe los temporizadores pendientes
+  // (el de caducidad de la sesión).
   await tester.pumpWidget(
-    UncontrolledProviderScope(
-      container: contenedor,
+    ProviderScope(
+      overrides: [
+        ...apiConectada(),
+        ...sesionSimulada(almacen: AlmacenSesionMemoria(sesionPrueba())),
+      ],
       child: const CreaFacilAdminApp(),
     ),
   );
   await tester.pumpAndSettle();
-  return contenedor;
+  return ProviderScope.containerOf(
+    tester.element(find.byType(CreaFacilAdminApp)),
+  );
 }
 
 final riel = find.byKey(AdminShell.claveRiel);

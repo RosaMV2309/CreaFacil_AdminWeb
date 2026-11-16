@@ -6,6 +6,7 @@ import '../../../core/theme/cf_tokens.dart';
 import '../../../core/widgets/cf_logo.dart';
 import '../../../core/widgets/responsive_layout.dart';
 import 'secciones_panel.dart';
+import 'usuario_panel.dart';
 
 /// Estructura del panel administrativo con navegación adaptable [RNF-05]:
 ///
@@ -34,7 +35,10 @@ class AdminShell extends StatelessWidget {
 
     if (tamano == TamanoPantalla.movil) {
       return Scaffold(
-        appBar: AppBar(title: const CfMarcaEncabezado()),
+        appBar: AppBar(
+          title: const CfMarcaEncabezado(),
+          actions: const [AccionesUsuarioPanel(compacto: true)],
+        ),
         drawer: _MenuDesplegable(indice: indice, alElegir: ir),
         body: child,
       );
@@ -42,7 +46,10 @@ class AdminShell extends StatelessWidget {
 
     final extendido = tamano == TamanoPantalla.escritorio;
     return Scaffold(
-      appBar: AppBar(title: const CfMarcaEncabezado()),
+      appBar: AppBar(
+        title: const CfMarcaEncabezado(),
+        actions: const [AccionesUsuarioPanel()],
+      ),
       body: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -111,6 +118,15 @@ class _MenuDesplegable extends StatelessWidget {
                   alignment: Alignment.centerLeft,
                   child: CfMarcaEncabezado(),
                 ),
+              ),
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  tokens.espacioSm,
+                  0,
+                  tokens.espacioSm,
+                  tokens.espacioMd,
+                ),
+                child: const UsuarioMenuPanel(),
               ),
               Divider(color: AppColors.blanco.withValues(alpha: 0.2)),
               SizedBox(height: tokens.espacioSm),
