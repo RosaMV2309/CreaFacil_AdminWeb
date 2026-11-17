@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/autenticacion/presentation/acceso_page.dart';
+import '../../features/autenticacion/presentation/autenticacion_providers.dart';
 import '../../features/dev/presentation/componentes_page.dart';
 import '../../features/inicio/presentation/inicio_page.dart';
 import '../../features/panel/presentation/admin_shell.dart';
@@ -13,15 +15,43 @@ import 'rutas.dart';
 export 'rutas.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
-  return GoRouter(
+  // Avisa al router cada vez que cambia la sesión para reevaluar `redirect`.
+  final refresco = ValueNotifier<int>(0);
+  late final GoRouter router;
+
+  ref.listen(sesionControllerProvider, (anterior, siguiente) {
+    final teniaSesion = anterior?.value?.iniciada ?? false;
+    final estado = siguiente.value;
+    // Sesión caducada o 401: al inicio de sesión con el aviso, recordando la
+    // sección. La ubicación se toma ANTES de refrescar el router.
+    if (teniaSesion &&
+        estado != null &&
+        !estado.iniciada &&
+        estado.aviso != null) {
+      final actual = router.routerDelegate.currentConfiguration.uri;
+      final desde = actual.path == Rutas.acceso || actual.path == Rutas.inicio
+          ? null
+          : actual.toString();
+      router.go(Rutas.accesoDesde(desde));
+    }
+    refresco.value++;
+  });
+
+  router = GoRouter(
     initialLocation: Rutas.inicio,
-    // Esqueleto de la protección por sesión y rol ADMIN. Hoy es permisivo.
-    // TODO(Fase 1, RF-01 y RF-02): activar y refrescar al cambiar la sesión.
+    refreshListenable: refresco,
+    // Guardia activa: el panel exige una sesión con rol ADMIN [RF-02][RNF-03].
     redirect: (context, state) => redireccionPorSesion(
-      sesion: ref.read(sesionPanelProvider),
-      ubicacion: state.matchedLocation,
+      estado: ref.read(sesionControllerProvider),
+      uri: state.uri,
     ),
     routes: [
+      // Inicio de sesión, fuera del AdminShell.
+      GoRoute(
+        path: Rutas.acceso,
+        builder: (context, state) =>
+            AccesoPage(desde: state.uri.queryParameters[Rutas.parametroDesde]),
+      ),
       // Secciones del panel dentro del AdminShell (menú adaptable).
       ShellRoute(
         builder: (context, state, child) =>
@@ -51,4 +81,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ),
     ],
   );
+
+  ref.onDispose(() {
+    router.dispose();
+    refresco.dispose();
+  });
+  return router;
 });

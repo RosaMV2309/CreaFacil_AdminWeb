@@ -5,14 +5,24 @@ import 'package:creafacil_admin/features/estado_api/presentation/estado_api_tarj
 import 'package:creafacil_admin/features/inicio/presentation/inicio_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'helpers/api_falsa.dart';
 import 'helpers/envolver.dart';
+import 'helpers/sesion_falsa.dart';
 
-/// El panel con la API simulada «conectada» (las pruebas no usan la red).
-Widget appDePrueba() =>
-    ProviderScope(overrides: apiConectada(), child: const CreaFacilAdminApp());
+/// El panel con la API simulada «conectada» y la sesión de la administradora
+/// (las pruebas no usan la red ni el almacenamiento real).
+List<Override> panelConSesion() => [
+  ...apiConectada(),
+  ...sesionSimulada(almacen: AlmacenSesionMemoria(sesionPrueba())),
+];
+
+Widget appDePrueba() => ProviderScope(
+  overrides: panelConSesion(),
+  child: const CreaFacilAdminApp(),
+);
 
 final tarjetaBienvenida = find.byKey(InicioPage.claveBienvenida);
 
@@ -28,7 +38,7 @@ void main() {
     final clave = UniqueKey();
     await tester.pumpWidget(
       ProviderScope(
-        overrides: apiConectada(),
+        overrides: panelConSesion(),
         child: CreaFacilAdminApp(key: clave),
       ),
     );

@@ -103,6 +103,48 @@ tool/
 └── cobertura.dart              # umbral de cobertura (CI y local)
 ```
 
+## Acceso de la administradora (Fase 1 · RF-01, RF-02, RNF-03)
+
+El panel **exige iniciar sesión con el rol `ADMIN`**. Código en `lib/features/autenticacion/`.
+
+**Flujo**
+
+1. Sin sesión, cualquier ruta del panel lleva a `/acceso` (fuera del AdminShell), conservando la
+   sección pedida (`/acceso?desde=/agenda`). Solo hay inicio de sesión: **no hay registro** en el panel
+   ni «¿Olvidaste tu contraseña?».
+2. Con las credenciales de la administradora (`ADMIN_EMAIL` y `ADMIN_PASSWORD` del `.env` del
+   backend, creadas por el seed) entra al panel; su nombre aparece en la cabecera (en móvil, en el
+   menú desplegable) junto a «Cerrar sesión», que pide confirmación.
+3. Si inicia sesión un **CLIENTE**, la sesión **no se guarda** y se muestra
+   «Acceso solo para la administradora.».
+4. Errores con `CfMessage`: 401 «Correo o contraseña incorrectos.», 403 cuenta desactivada y
+   429 demasiados intentos (con el tiempo de espera).
+
+API consumida: `POST /auth/login` y `GET /auth/perfil`.
+
+**Guardia por rol** (`lib/core/router/guardia_sesion.dart`, `proteccionPorRolActiva = true`): el router
+se refresca con cada cambio de la sesión (`refreshListenable`). Es solo navegación: el servidor
+verifica **siempre** el JWT y el rol (RNF-03, RN-05).
+
+**Sesión**
+
+- JWT de 8 horas **sin renovación**. Al recargar la página se restaura: si `expiraEn` ya pasó se borra;
+  si no, se valida con `GET /auth/perfil` (si responde 401, se borra).
+- Si caduca o la API responde 401 a una petición autenticada, se vuelve a `/acceso` con el aviso
+  «Tu sesión expiró, vuelve a iniciar sesión.».
+- Se guarda con `shared_preferences`, que en el navegador usa el **almacenamiento local**.
+  **Riesgo de XSS**: un script inyectado podría leer el token. Se acepta en esta etapa porque el
+  servidor verifica siempre el JWT y el rol `ADMIN`, el token caduca a las 8 horas, Flutter web no
+  inserta HTML de usuarios y el panel no carga contenido de terceros. Una mejora futura sería una
+  cookie `HttpOnly` emitida por el backend.
+
+**Código compartido con CreaFacil_Frontend**: `lib/core/` (red, componentes `Cf*`, tema y widgets) y,
+en `features/autenticacion/`, el dominio, los modelos, el repositorio, `AlmacenSesion`, el controlador,
+los providers y el formulario de acceso son **idénticos**. Solo cambian
+`presentation/configuracion_acceso.dart` (rol `ADMIN`, mensaje de rechazo y almacén), el almacén
+concreto (`AlmacenSesionPreferencias`) y la pantalla `acceso_page.dart`. Si se cambia un archivo
+común, hay que replicarlo en el otro repositorio en su propia rama y PR.
+
 ## Identidad visual
 
 Solo se usan los colores de la paleta oficial, definidos en `lib/core/theme/app_colors.dart`

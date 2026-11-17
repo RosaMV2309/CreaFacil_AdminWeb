@@ -21,10 +21,21 @@ abstract final class Rutas {
   /// Reportes (Fase 7).
   static const reportes = '/reportes';
 
-  /// Inicio de sesión de la administradora. Prevista para la Fase 1
-  /// (RF-01 y RF-02); todavía no existe.
+  /// Inicio de sesión de la administradora (RF-01 y RF-02). Fuera del
+  /// AdminShell y sin protección.
   static const acceso = '/acceso';
 
   /// Catálogo de componentes Cf*. Solo existe en modo debug.
   static const componentes = '/dev/componentes';
+
+  /// Parámetro de consulta con el destino al que volver tras iniciar sesión.
+  static const parametroDesde = 'desde';
+
+  /// `/acceso?desde=<destino>` (o `/acceso` si no hay destino).
+  static String accesoDesde(String? destino) => destino == null
+      ? acceso
+      : Uri(
+          path: acceso,
+          queryParameters: {parametroDesde: destino},
+        ).toString();
 }
