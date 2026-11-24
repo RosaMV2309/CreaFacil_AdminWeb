@@ -145,6 +145,45 @@ los providers y el formulario de acceso son **idénticos**. Solo cambian
 concreto (`AlmacenSesionPreferencias`) y la pantalla `acceso_page.dart`. Si se cambia un archivo
 común, hay que replicarlo en el otro repositorio en su propia rama y PR.
 
+## Gestión del catálogo (categorías y materiales)
+
+Fase 2 · subfase 2.4a (RF-22, RF-05, RF-08). La sección **Catálogo** (`/catalogo`) tiene tres
+pestañas: **Categorías**, **Materiales** y **Servicios** (esta última llega en la subfase 2.4b).
+
+API consumida (todas exigen el token de la administradora):
+
+| Acción | Petición |
+|---|---|
+| Listar categorías (sin paginar) | `GET /admin/categorias?q=&activa=` |
+| Crear / editar categoría | `POST /admin/categorias` · `PATCH /admin/categorias/:id` |
+| Listar materiales (paginado, 20 por página) | `GET /admin/materiales?pagina=&porPagina=&q=&activo=` |
+| Crear / editar material | `POST /admin/materiales` · `PATCH /admin/materiales/:id` |
+
+- **No se borra nada**: solo se activa o desactiva con `PATCH` (`activa`/`activo`).
+- Al **desactivar una categoría con servicios activos** se pide confirmación: «Sus N servicios dejarán
+  de verse en el catálogo, pero no se desactivan.».
+- La edición envía **solo los campos cambiados**; si no hay cambios, no se envía nada.
+- Errores: los 400 (`VALIDACION`) se muestran en su campo; los 409 (nombre repetido) y 404 (no existe),
+  en un `CfMessage`. Mientras se guarda, el botón muestra la carga y no admite envíos dobles.
+- Tras crear, editar o cambiar el estado se muestra un aviso de éxito y la lista se vuelve a pedir.
+
+**Precio exacto (sin `double`).** La API envía y recibe el precio como texto con dos decimales
+(`"0.75"`). La clase `Precio` (`features/catalogo/domain/precio.dart`) lo guarda como un **entero de
+céntimos** y lo convierte con operaciones de enteros:
+
+- Entrada: se valida con la misma regla que el servidor, `^\d+(\.\d{1,2})?$`, mayor que 0 y como
+  máximo `99999.99` (punto decimal; `4,50` o `1.234` se rechazan con un mensaje claro).
+- Envío: `precio.textoApi` → `"4.50"` (siempre texto).
+- Pantalla: `precio.formateado` → `$ 4,50` o `$ 1.234,50` (coma decimal, punto de miles; sin redondeos).
+
+Al editar el precio se recuerda que el cambio **no afecta a las cotizaciones ya guardadas** (RN-02).
+
+Arquitectura: `features/catalogo/{domain,data,presentation}` con Riverpod (`filtroCategoriasProvider`,
+`categoriasControllerProvider`, `filtroMaterialesProvider`, `materialesControllerProvider`). Componentes
+nuevos en `lib/core/design_system/`: `CfDataTable` (estados de carga, vacío y error, paginación y vista
+de tarjetas en pantallas estrechas), `CfDialog`, `CfSelect`, `CfTabs` y `CfTextarea`. **Por ahora solo
+existen en este repositorio**; se sincronizarán con CreaFacil_Frontend en la subfase 2.5.
+
 ## Identidad visual
 
 Solo se usan los colores de la paleta oficial, definidos en `lib/core/theme/app_colors.dart`
