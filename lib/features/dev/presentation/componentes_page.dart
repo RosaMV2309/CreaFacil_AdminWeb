@@ -303,6 +303,80 @@ class _ComponentesPageState extends State<ComponentesPage> {
                     ),
                   ],
                 ),
+                separacion,
+                CfCard(
+                  title: 'CfDataTable, CfSelect, CfTextarea y CfDialog',
+                  subtitle: 'Tabla (tarjetas en pantallas estrechas)',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      CfDataTable<(String, String)>(
+                        filas: const [
+                          ('Lienzo', r'$ 4,50'),
+                          ('Pintura acrílica', r'$ 0,75'),
+                        ],
+                        columnas: [
+                          CfColumna(
+                            titulo: 'Material',
+                            flex: 2,
+                            celda: (f) => Text(f.$1),
+                          ),
+                          CfColumna(
+                            titulo: 'Precio',
+                            numerica: true,
+                            celda: (f) => Text(f.$2),
+                          ),
+                        ],
+                        acciones: (f) => [
+                          CfAccionFila(
+                            etiqueta: 'Editar',
+                            icono: Icons.edit_outlined,
+                            onPressed: () => _avisar('Editar ${f.$1}'),
+                          ),
+                        ],
+                        paginacion: CfPaginacion(
+                          pagina: 1,
+                          totalPaginas: 1,
+                          total: 2,
+                          onCambiar: (_) {},
+                        ),
+                      ),
+                      SizedBox(height: tokens.espacioLg),
+                      CfSelect<int>(
+                        label: 'Estado',
+                        valor: 0,
+                        opciones: const [
+                          CfOpcion(0, 'Todos'),
+                          CfOpcion(1, 'Activos'),
+                        ],
+                        onChanged: (_) {},
+                      ),
+                      SizedBox(height: tokens.espacioLg),
+                      const CfTextarea(label: 'Descripción'),
+                      SizedBox(height: tokens.espacioLg),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: CfButton(
+                          label: 'Abrir diálogo',
+                          variant: CfButtonVariant.secondary,
+                          onPressed: () => CfDialog.mostrar<void>(
+                            context,
+                            builder: (contexto) => CfDialog(
+                              titulo: 'Nuevo material',
+                              acciones: [
+                                CfButton(
+                                  label: 'Cerrar',
+                                  onPressed: () => Navigator.of(contexto).pop(),
+                                ),
+                              ],
+                              child: const Text('Contenido del formulario.'),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
