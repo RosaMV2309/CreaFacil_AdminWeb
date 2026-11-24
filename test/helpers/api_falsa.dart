@@ -8,6 +8,8 @@ import 'package:creafacil_admin/features/estado_api/presentation/estado_api_prov
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/misc.dart';
 
+import 'catalogo_falso.dart';
+
 /// Adaptador HTTP falso para Dio: registra las peticiones y responde con
 /// [responder] sin tocar la red.
 class AdaptadorHttpFalso implements HttpClientAdapter {
@@ -96,4 +98,6 @@ List<Override> apiConectada() => [
   estadoApiRepositoryProvider.overrideWithValue(
     RepositorioEstadoApiFalso(() async => estadoConectado),
   ),
+  // El catálogo, vacío y en memoria (sin red).
+  ...catalogoSimulado(),
 ];

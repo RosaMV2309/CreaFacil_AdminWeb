@@ -125,14 +125,7 @@ abstract final class SeccionesPanel {
   ];
 
   /// Secciones que todavía son marcadores de posición.
-  static const pendientes = [
-    catalogo,
-    precios,
-    cotizaciones,
-    pedidos,
-    agenda,
-    reportes,
-  ];
+  static const pendientes = [precios, cotizaciones, pedidos, agenda, reportes];
 
   /// Índice de la sección que corresponde a [ubicacion] (Inicio si no hay).
   static int indiceDe(String ubicacion) {
