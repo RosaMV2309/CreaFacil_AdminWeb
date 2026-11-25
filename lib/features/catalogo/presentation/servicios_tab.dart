@@ -242,6 +242,7 @@ class _ServiciosTabState extends ConsumerState<ServiciosTab> {
           columnas: [
             CfColumna(
               titulo: 'Portada',
+              flex: 2,
               celda: (s) => Align(
                 alignment: Alignment.centerLeft,
                 child: CfMiniatura(
