@@ -26,10 +26,13 @@ void main() {
     expect(find.text('Secundario'), findsWidgets);
     expect(find.text('Contorno'), findsOneWidget);
     expect(find.text('Eliminar'), findsOneWidget);
-    expect(find.byType(CfTag), findsNWidgets(6));
+    expect(find.byType(CfTag), findsNWidgets(8));
     expect(find.byType(CfMessage), findsNWidgets(4));
     expect(find.byType(CfSpinner), findsOneWidget);
-    expect(find.byType(CfEmptyState), findsOneWidget);
+    expect(find.byType(CfEmptyState), findsNWidgets(2));
+    expect(find.byType(CfFileUpload), findsNWidgets(2));
+    expect(find.byType(CfGalleria), findsNWidgets(2));
+    expect(find.byType(CfMultiSelect<int>), findsOneWidget);
     expect(find.byType(CfErrorState), findsOneWidget);
     expect(find.byType(CfDataTable<(String, String)>), findsOneWidget);
     expect(find.byType(CfSelect<int>), findsOneWidget);
@@ -43,6 +46,16 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.text('Contenido del formulario.'), findsNothing);
     await tester.tap(find.byTooltip('Editar').first);
+    await tester.pump();
+
+    // Componentes de archivos y selección múltiple.
+    await tester.ensureVisible(find.text('Barniz (litro)'));
+    await tester.tap(find.text('Barniz (litro)'));
+    await tester.pump();
+    expect(find.text('2 seleccionados'), findsOneWidget);
+    await tester.tap(find.text('Elegir imagen').first);
+    await tester.tap(find.byTooltip('Mover a la derecha').first);
+    await tester.tap(find.byTooltip('Borrar').first);
     await tester.pump();
   });
 

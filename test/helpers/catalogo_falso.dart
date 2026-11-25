@@ -1,7 +1,13 @@
+import 'dart:async';
+import 'dart:typed_data';
+
+import 'package:creafacil_admin/core/archivos/selector_archivos.dart';
 import 'package:creafacil_admin/core/network/red.dart';
 import 'package:creafacil_admin/features/catalogo/domain/entidades_catalogo.dart';
 import 'package:creafacil_admin/features/catalogo/domain/precio.dart';
+import 'package:creafacil_admin/features/catalogo/domain/servicios.dart';
 import 'package:creafacil_admin/features/catalogo/presentation/catalogo_providers.dart';
+import 'package:creafacil_admin/features/catalogo/presentation/servicios_providers.dart';
 import 'package:flutter_riverpod/misc.dart';
 
 final fechaPrueba = DateTime.utc(2026, 11, 20, 12);
@@ -236,6 +242,8 @@ class RepositorioMaterialesFalso implements MaterialesRepository {
 List<Override> catalogoSimulado({
   CategoriasRepository? categorias,
   MaterialesRepository? materiales,
+  ServiciosRepository? servicios,
+  SelectorArchivos? selector,
 }) => [
   categoriasRepositoryProvider.overrideWithValue(
     categorias ?? RepositorioCategoriasFalso(),
@@ -243,4 +251,277 @@ List<Override> catalogoSimulado({
   materialesRepositoryProvider.overrideWithValue(
     materiales ?? RepositorioMaterialesFalso(),
   ),
+  serviciosRepositoryProvider.overrideWithValue(
+    servicios ?? RepositorioServiciosFalso(),
+  ),
+  selectorArchivosProvider.overrideWithValue(
+    selector ?? SelectorArchivosFalso(),
+  ),
 ];
+
+// ------------------------------------------------------------------ Servicios
+
+const categoriaServicioPrueba = CategoriaDeServicio(
+  id: 'c1',
+  nombre: 'Murales',
+  activa: true,
+);
+
+FotoServicio fotoPrueba(String id, int orden) =>
+    FotoServicio(id: id, url: 'http://api.test/uploads/$id.png', orden: orden);
+
+ServicioDetalle servicioPrueba({
+  String id = 's1',
+  String nombre = 'Mural infantil',
+  CategoriaDeServicio categoria = categoriaServicioPrueba,
+  bool activo = true,
+  String? precio = '120.50',
+  String? descripcion,
+  String? dimensiones,
+  String? observaciones,
+  List<MaterialDeServicio> materiales = const [],
+  List<FotoServicio> fotos = const [],
+}) => ServicioDetalle(
+  id: id,
+  nombre: nombre,
+  categoria: categoria,
+  activo: activo,
+  precioBaseReferencial: precio == null ? null : Precio.intentar(precio),
+  portadaUrl: fotos.isEmpty ? null : fotos.first.url,
+  numeroFotos: fotos.length,
+  creadoEn: fechaPrueba,
+  actualizadoEn: fechaPrueba,
+  descripcion: descripcion,
+  dimensionesOrientativas: dimensiones,
+  observaciones: observaciones,
+  materiales: materiales,
+  fotos: fotos,
+);
+
+Map<String, Object?> jsonServicio({
+  String id = 's1',
+  Object? precio = '120.50',
+  bool detalle = false,
+  bool categoriaActiva = true,
+}) => {
+  'id': id,
+  'nombre': 'Mural infantil',
+  'categoria': {'id': 'c1', 'nombre': 'Murales', 'activa': categoriaActiva},
+  'activo': true,
+  'precioBaseReferencial': precio,
+  'portadaUrl': 'http://api.test/uploads/f1.png',
+  'numeroFotos': 2,
+  'creadoEn': '2026-11-20T12:00:00.000Z',
+  'actualizadoEn': '2026-11-20T12:00:00.000Z',
+  if (detalle) ...{
+    'descripcion': 'Mural pintado a mano',
+    'dimensionesOrientativas': null,
+    'observaciones': null,
+    'materiales': [
+      {'id': 'm1', 'nombre': 'Lienzo', 'unidad': 'metro', 'activo': false},
+    ],
+    'fotos': [
+      {'id': 'f2', 'url': 'http://api.test/uploads/f2.png', 'orden': 1},
+      {'id': 'f1', 'url': 'http://api.test/uploads/f1.png', 'orden': 0},
+    ],
+  },
+};
+
+/// Repositorio de servicios en memoria que filtra y ordena como el servidor.
+class RepositorioServiciosFalso implements ServiciosRepository {
+  RepositorioServiciosFalso([
+    List<ServicioDetalle>? iniciales,
+    this.categorias = const [],
+  ]) : servicios = [...?iniciales];
+
+  final List<ServicioDetalle> servicios;
+  final List<Categoria> categorias;
+  final llamadas = <String>[];
+  ApiException? errorListar;
+  ApiException? errorObtener;
+  ApiException? errorGuardar;
+  ApiException? errorFoto;
+  Completer<void>? esperaFoto;
+  DatosServicio? ultimoAlta;
+  Map<String, Object?>? ultimosCambios;
+  var _siguiente = 100;
+
+  int _indice(String id) => servicios.indexWhere((s) => s.id == id);
+
+  ServicioDetalle _con(
+    ServicioDetalle a, {
+    Map<String, Object?> cambios = const {},
+    List<FotoServicio>? fotos,
+  }) {
+    final categoriaId = cambios['categoriaId'] as String?;
+    final c = categoriaId == null
+        ? a.categoria
+        : categorias
+              .where((x) => x.id == categoriaId)
+              .map(
+                (x) => CategoriaDeServicio(
+                  id: x.id,
+                  nombre: x.nombre,
+                  activa: x.activa,
+                ),
+              )
+              .first;
+    String? texto(String clave, String? actual) =>
+        cambios.containsKey(clave) ? cambios[clave] as String? : actual;
+    return servicioPrueba(
+      id: a.id,
+      nombre: (cambios['nombre'] as String?) ?? a.nombre,
+      categoria: c,
+      activo: (cambios['activo'] as bool?) ?? a.activo,
+      precio: texto('precioBaseReferencial', a.precioBaseReferencial?.textoApi),
+      descripcion: texto('descripcion', a.descripcion),
+      dimensiones: texto('dimensionesOrientativas', a.dimensionesOrientativas),
+      observaciones: texto('observaciones', a.observaciones),
+      materiales: cambios.containsKey('materialIds')
+          ? [
+              for (final id in cambios['materialIds']! as List<String>)
+                MaterialDeServicio(
+                  id: id,
+                  nombre: 'Material $id',
+                  unidad: 'unidad',
+                  activo: true,
+                ),
+            ]
+          : a.materiales,
+      fotos: fotos ?? a.fotos,
+    );
+  }
+
+  @override
+  Future<Paginado<ServicioResumen>> listar({
+    int pagina = 1,
+    int porPagina = 20,
+    String q = '',
+    String? categoriaId,
+    bool? activo,
+  }) async {
+    llamadas.add('listar:$pagina:$q:${categoriaId ?? ''}:$activo');
+    if (errorListar != null) throw errorListar!;
+    final filtrados = [
+      for (final s in servicios)
+        if (s.nombre.toLowerCase().contains(q.toLowerCase()) &&
+            (categoriaId == null ||
+                categoriaId.isEmpty ||
+                s.categoria.id == categoriaId) &&
+            (activo == null || s.activo == activo))
+          s,
+    ];
+    final total = filtrados.length;
+    return Paginado(
+      datos: filtrados.skip((pagina - 1) * porPagina).take(porPagina).toList(),
+      pagina: pagina,
+      porPagina: porPagina,
+      total: total,
+      totalPaginas: (total / porPagina).ceil(),
+    );
+  }
+
+  @override
+  Future<ServicioDetalle> obtener(String id) async {
+    llamadas.add('obtener:$id');
+    if (errorObtener != null) throw errorObtener!;
+    return servicios[_indice(id)];
+  }
+
+  @override
+  Future<ServicioDetalle> crear(DatosServicio datos) async {
+    llamadas.add('crear:${datos.nombre}');
+    ultimoAlta = datos;
+    if (errorGuardar != null) throw errorGuardar!;
+    final nuevo = _con(
+      servicioPrueba(id: 's${_siguiente++}', precio: null),
+      cambios: datos.aJson(),
+    );
+    servicios.add(nuevo);
+    return nuevo;
+  }
+
+  @override
+  Future<ServicioDetalle> actualizar(
+    String id,
+    Map<String, Object?> cambios,
+  ) async {
+    llamadas.add('actualizar:$id:$cambios');
+    ultimosCambios = cambios;
+    if (errorGuardar != null) throw errorGuardar!;
+    final i = _indice(id);
+    return servicios[i] = _con(servicios[i], cambios: cambios);
+  }
+
+  @override
+  Future<FotoServicio> subirFoto(
+    String id,
+    ArchivoFoto archivo, {
+    void Function(double progreso)? progreso,
+  }) async {
+    llamadas.add('subir:$id:${archivo.nombre}:${archivo.tipoMime}');
+    progreso?.call(0.5);
+    if (esperaFoto != null) await esperaFoto!.future;
+    if (errorFoto != null) throw errorFoto!;
+    progreso?.call(1);
+    final i = _indice(id);
+    final foto = fotoPrueba('f${_siguiente++}', servicios[i].fotos.length);
+    servicios[i] = _con(servicios[i], fotos: [...servicios[i].fotos, foto]);
+    return foto;
+  }
+
+  List<FotoServicio> _renumerar(String id, List<FotoServicio> fotos) {
+    final nuevas = [
+      for (var i = 0; i < fotos.length; i++) fotoPrueba(fotos[i].id, i),
+    ];
+    final i = _indice(id);
+    servicios[i] = _con(servicios[i], fotos: nuevas);
+    return nuevas;
+  }
+
+  @override
+  Future<List<FotoServicio>> ordenarFotos(
+    String id,
+    List<String> fotoIds,
+  ) async {
+    llamadas.add('ordenar:$id:${fotoIds.join(',')}');
+    if (errorFoto != null) throw errorFoto!;
+    final fotos = servicios[_indice(id)].fotos;
+    return _renumerar(id, [
+      for (final f in fotoIds) fotos.firstWhere((x) => x.id == f),
+    ]);
+  }
+
+  @override
+  Future<List<FotoServicio>> borrarFoto(String id, String fotoId) async {
+    llamadas.add('borrar:$id:$fotoId');
+    if (errorFoto != null) throw errorFoto!;
+    return _renumerar(id, [
+      for (final f in servicios[_indice(id)].fotos)
+        if (f.id != fotoId) f,
+    ]);
+  }
+}
+
+/// Selector de archivos simulado: devuelve [siguiente].
+class SelectorArchivosFalso implements SelectorArchivos {
+  ArchivoElegido? siguiente;
+  var llamadas = 0;
+
+  /// Archivo de [tamano] bytes (los bytes reales se generan al leer).
+  void elegir(String nombre, {int? tamano = 70, int bytes = 70}) {
+    siguiente = ArchivoElegido(
+      nombre: nombre,
+      tamano: tamano,
+      leer: () async => Uint8List(bytes),
+    );
+  }
+
+  @override
+  Future<ArchivoElegido?> elegirImagen({
+    required List<String> extensiones,
+  }) async {
+    llamadas++;
+    return siguiente;
+  }
+}
