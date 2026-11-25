@@ -37,17 +37,21 @@ class ApiClient {
     () => dio.get<dynamic>(ruta, queryParameters: consulta, options: opciones),
   );
 
+  /// [alEnviar] informa del progreso del envío (por ejemplo, al subir una
+  /// foto con `FormData`).
   Future<Response<dynamic>> post(
     String ruta, {
     Object? datos,
     Map<String, dynamic>? consulta,
     Options? opciones,
+    ProgressCallback? alEnviar,
   }) => _ejecutar(
     () => dio.post<dynamic>(
       ruta,
       data: datos,
       queryParameters: consulta,
       options: opciones,
+      onSendProgress: alEnviar,
     ),
   );
 

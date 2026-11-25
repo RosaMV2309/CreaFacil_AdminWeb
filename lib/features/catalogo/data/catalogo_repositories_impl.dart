@@ -1,5 +1,8 @@
+import 'package:dio/dio.dart';
+
 import '../../../core/network/red.dart';
 import '../domain/entidades_catalogo.dart';
+import '../domain/servicios.dart';
 import 'catalogo_modelos.dart';
 
 /// Error si el servidor responde con una forma distinta a la del contrato.
@@ -116,5 +119,123 @@ class MaterialesRepositoryImpl implements MaterialesRepository {
 
   MaterialCatalogo _material(Object? cuerpo) => _leer(
     () => CatalogoModelos.material(CatalogoModelos.campo(cuerpo, 'material')),
+  );
+}
+
+/// Servicios contra `/admin/servicios` (Bearer de ADMIN) [RF-22][RF-05][RF-04].
+///
+/// Errores (como [ApiException]): 400 VALIDACION por campo, 404 «El servicio
+/// no existe.», 409 nombre repetido en la categoría o máximo de 8 fotos y
+/// 413 foto de más de 5 MB. No hay DELETE de servicios: solo `activo: false`.
+class ServiciosRepositoryImpl implements ServiciosRepository {
+  ServiciosRepositoryImpl(this._api);
+
+  final ApiClient _api;
+
+  static const ruta = '/admin/servicios';
+
+  /// Nombre del campo del archivo en el `multipart/form-data`.
+  static const campoFoto = 'foto';
+
+  String _rutaDe(String id) => '$ruta/${Uri.encodeComponent(id)}';
+
+  @override
+  Future<Paginado<ServicioResumen>> listar({
+    int pagina = 1,
+    int porPagina = 20,
+    String q = '',
+    String? categoriaId,
+    bool? activo,
+  }) async {
+    final r = await _api.get(
+      ruta,
+      consulta: {
+        'pagina': '$pagina',
+        'porPagina': '$porPagina',
+        if (q.trim().isNotEmpty) 'q': q.trim(),
+        if (categoriaId != null && categoriaId.isNotEmpty)
+          'categoriaId': categoriaId,
+        if (activo != null) 'activo': '$activo',
+      },
+    );
+    return _leer(
+      () => CatalogoModelos.paginado(r.data, CatalogoModelos.servicioResumen),
+    );
+  }
+
+  @override
+  Future<ServicioDetalle> obtener(String id) async {
+    final r = await _api.get(_rutaDe(id));
+    return _servicio(r.data);
+  }
+
+  @override
+  Future<ServicioDetalle> crear(DatosServicio datos) async {
+    final r = await _api.post(ruta, datos: datos.aJson());
+    return _servicio(r.data);
+  }
+
+  @override
+  Future<ServicioDetalle> actualizar(
+    String id,
+    Map<String, Object?> cambios,
+  ) async {
+    final r = await _api.patch(_rutaDe(id), datos: cambios);
+    return _servicio(r.data);
+  }
+
+  @override
+  Future<FotoServicio> subirFoto(
+    String id,
+    ArchivoFoto archivo, {
+    void Function(double progreso)? progreso,
+  }) async {
+    final formulario = FormData.fromMap({
+      campoFoto: MultipartFile.fromBytes(
+        archivo.bytes,
+        filename: archivo.nombre,
+        contentType: DioMediaType.parse(archivo.tipoMime),
+      ),
+    });
+    final r = await _api.post(
+      '${_rutaDe(id)}/fotos',
+      datos: formulario,
+      alEnviar: progreso == null
+          ? null
+          : (enviados, total) {
+              if (total > 0) {
+                progreso(enviados / total);
+              }
+            },
+    );
+    return _leer(
+      () => CatalogoModelos.foto(CatalogoModelos.campo(r.data, 'foto')),
+    );
+  }
+
+  @override
+  Future<List<FotoServicio>> ordenarFotos(
+    String id,
+    List<String> fotoIds,
+  ) async {
+    final r = await _api.patch(
+      '${_rutaDe(id)}/fotos/orden',
+      datos: {'fotoIds': fotoIds},
+    );
+    return _leer(() => CatalogoModelos.fotos(r.data));
+  }
+
+  @override
+  Future<List<FotoServicio>> borrarFoto(String id, String fotoId) async {
+    final r = await _api.delete(
+      '${_rutaDe(id)}/fotos/${Uri.encodeComponent(fotoId)}',
+    );
+    return _leer(() => CatalogoModelos.fotos(r.data));
+  }
+
+  ServicioDetalle _servicio(Object? cuerpo) => _leer(
+    () => CatalogoModelos.servicioDetalle(
+      CatalogoModelos.campo(cuerpo, 'servicio'),
+    ),
   );
 }

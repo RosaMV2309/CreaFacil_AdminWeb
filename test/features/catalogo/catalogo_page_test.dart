@@ -4,6 +4,7 @@ import 'package:creafacil_admin/core/router/app_router.dart';
 import 'package:creafacil_admin/features/catalogo/presentation/catalogo_page.dart';
 import 'package:creafacil_admin/features/catalogo/presentation/categorias_tab.dart';
 import 'package:creafacil_admin/features/catalogo/presentation/materiales_tab.dart';
+import 'package:creafacil_admin/features/catalogo/presentation/servicios_tab.dart';
 import 'package:creafacil_admin/features/catalogo/presentation/widgets/comunes_catalogo.dart';
 import 'package:creafacil_admin/features/catalogo/presentation/widgets/formulario_categoria.dart';
 import 'package:creafacil_admin/features/catalogo/presentation/widgets/formulario_material.dart';
@@ -77,7 +78,8 @@ void main() {
       expect(find.byTooltip('Desactivar'), findsNWidgets(2));
 
       await _pulsar(tester, find.widgetWithText(Tab, 'Servicios'));
-      expect(find.textContaining(CatalogoPage.textoServicios), findsOneWidget);
+      expect(find.byType(ServiciosTab), findsOneWidget);
+      expect(find.text('Aún no hay servicios'), findsOneWidget);
     });
 
     testWidgets('crear: validación, 409 con CfMessage y éxito', (tester) async {
@@ -335,6 +337,12 @@ void main() {
       await _escribir(tester, FormularioMaterial.clavePrecio, '9.99');
       await _pulsar(tester, find.byKey(FormularioMaterial.claveGuardar));
       expect(find.text('El precio no es válido (servidor).'), findsOneWidget);
+      // Regresión: volver a guardar sin tocar el campo reenvía la petición.
+      await _pulsar(tester, find.byKey(FormularioMaterial.claveGuardar));
+      expect(
+        repo.llamadas.where((l) => l.startsWith('actualizar')),
+        hasLength(2),
+      );
       await _escribir(tester, FormularioMaterial.clavePrecio, '9.98');
       await tester.pumpAndSettle();
       expect(find.text('El precio no es válido (servidor).'), findsNothing);
