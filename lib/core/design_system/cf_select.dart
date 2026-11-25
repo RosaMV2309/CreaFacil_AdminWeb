@@ -19,6 +19,9 @@ class CfSelect<T> extends StatelessWidget {
     required this.valor,
     required this.onChanged,
     this.prefixIcon,
+    this.hint,
+    this.validator,
+    this.errorText,
     super.key,
   });
 
@@ -30,6 +33,15 @@ class CfSelect<T> extends StatelessWidget {
   final ValueChanged<T>? onChanged;
   final IconData? prefixIcon;
 
+  /// Texto que se ve cuando [valor] es `null`.
+  final String? hint;
+
+  /// Validación dentro de un `Form`.
+  final FormFieldValidator<T>? validator;
+
+  /// Error externo (por ejemplo, el 400 del servidor).
+  final String? errorText;
+
   @override
   Widget build(BuildContext context) {
     final tokens = CfTokens.of(context);
@@ -40,6 +52,9 @@ class CfSelect<T> extends StatelessWidget {
       isExpanded: true,
       dropdownColor: AppColors.blanco,
       borderRadius: BorderRadius.circular(tokens.radioSm),
+      hint: hint == null ? null : Text(hint!, overflow: TextOverflow.ellipsis),
+      validator: validator,
+      forceErrorText: errorText,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: prefixIcon == null ? null : Icon(prefixIcon),

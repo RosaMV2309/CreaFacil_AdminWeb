@@ -17,6 +17,7 @@ class ComponentesPage extends StatefulWidget {
 class _ComponentesPageState extends State<ComponentesPage> {
   bool _cargando = false;
   bool _mensajeVisible = true;
+  Set<int> _materiales = {1};
 
   void _avisar(String texto) {
     ScaffoldMessenger.of(context)
@@ -373,6 +374,71 @@ class _ComponentesPageState extends State<ComponentesPage> {
                             ),
                           ),
                         ),
+                      ),
+                    ],
+                  ),
+                ),
+                separacion,
+                CfCard(
+                  title: 'CfFileUpload, CfGalleria y CfMultiSelect',
+                  subtitle: 'Fotos de un servicio y selección de materiales',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      CfFileUpload(
+                        ayuda: 'JPG, PNG o WebP · máximo 5 MB · 2 de 8 fotos',
+                        progreso: _cargando ? 0.45 : null,
+                        onElegir: () => _avisar('Elegir imagen'),
+                      ),
+                      SizedBox(height: tokens.espacioLg),
+                      const CfFileUpload(
+                        onElegir: null,
+                        motivoDeshabilitado:
+                            'Este servicio ya tiene 8 fotos, el máximo.',
+                      ),
+                      SizedBox(height: tokens.espacioLg),
+                      CfGalleria(
+                        items: [
+                          for (var i = 0; i < 2; i++)
+                            CfGaleriaItem(
+                              url: Uri.base
+                                  .resolve('icons/Icon-192.png')
+                                  .toString(),
+                              descripcion: 'Foto de ejemplo ${i + 1}',
+                              insignia: i == 0 ? 'Portada' : null,
+                              acciones: [
+                                CfAccionFila(
+                                  etiqueta: 'Mover a la derecha',
+                                  icono: Icons.arrow_forward_rounded,
+                                  onPressed: () => _avisar('Mover'),
+                                ),
+                                CfAccionFila(
+                                  etiqueta: 'Borrar',
+                                  icono: Icons.delete_outline_rounded,
+                                  peligro: true,
+                                  onPressed: () => _avisar('Borrar'),
+                                ),
+                              ],
+                            ),
+                        ],
+                      ),
+                      SizedBox(height: tokens.espacioLg),
+                      const CfGalleria(items: [], textoVacio: 'Sin fotos'),
+                      SizedBox(height: tokens.espacioLg),
+                      CfMultiSelect<int>(
+                        label: 'Materiales habituales',
+                        ayuda: 'Solo materiales activos.',
+                        opciones: const [
+                          CfOpcionMultiple(1, 'Lienzo (metro)'),
+                          CfOpcionMultiple(2, 'Pintura acrílica (litro)'),
+                          CfOpcionMultiple(
+                            3,
+                            'Barniz (litro)',
+                            nota: 'inactivo',
+                          ),
+                        ],
+                        seleccionados: _materiales,
+                        onChanged: (v) => setState(() => _materiales = v),
                       ),
                     ],
                   ),
