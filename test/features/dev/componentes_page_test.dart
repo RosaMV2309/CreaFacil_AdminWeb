@@ -31,6 +31,19 @@ void main() {
     expect(find.byType(CfSpinner), findsOneWidget);
     expect(find.byType(CfEmptyState), findsOneWidget);
     expect(find.byType(CfErrorState), findsOneWidget);
+    expect(find.byType(CfDataTable<(String, String)>), findsOneWidget);
+    expect(find.byType(CfSelect<int>), findsOneWidget);
+    expect(find.byType(CfTextarea), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Abrir diálogo'));
+    await tester.tap(find.text('Abrir diálogo'));
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text('Contenido del formulario.'), findsOneWidget);
+    await tester.tap(find.widgetWithText(CfButton, 'Cerrar'));
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text('Contenido del formulario.'), findsNothing);
+    await tester.tap(find.byTooltip('Editar').first);
+    await tester.pump();
   });
 
   testWidgets('el botón de carga del catálogo cambia de estado', (

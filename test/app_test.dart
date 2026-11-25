@@ -105,7 +105,9 @@ void main() {
     await tester.tap(find.text('Gestionar el catálogo'));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Disponible en la Fase 2.'), findsOneWidget);
+    // Pestañas de la gestión del catálogo (subfase 2.4a).
+    expect(find.text('Materiales'), findsOneWidget);
+    expect(find.text('Aún no hay categorías'), findsOneWidget);
   });
 
   testWidgets('en modo debug abre el catálogo de componentes', (tester) async {

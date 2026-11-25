@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/autenticacion/presentation/acceso_page.dart';
 import '../../features/autenticacion/presentation/autenticacion_providers.dart';
+import '../../features/catalogo/presentation/catalogo_page.dart';
 import '../../features/dev/presentation/componentes_page.dart';
 import '../../features/inicio/presentation/inicio_page.dart';
 import '../../features/panel/presentation/admin_shell.dart';
@@ -61,6 +62,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: Rutas.inicio,
             pageBuilder: (context, state) =>
                 NoTransitionPage(key: state.pageKey, child: const InicioPage()),
+          ),
+          GoRoute(
+            path: Rutas.catalogo,
+            pageBuilder: (context, state) => NoTransitionPage(
+              key: state.pageKey,
+              child: const CatalogoPage(),
+            ),
           ),
           for (final seccion in SeccionesPanel.pendientes)
             GoRoute(

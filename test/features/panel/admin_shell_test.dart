@@ -50,6 +50,10 @@ void main() {
         ('Reportes', 7),
       ]);
       expect(SeccionesPanel.pendientes, isNot(contains(SeccionesPanel.inicio)));
+      expect(
+        SeccionesPanel.pendientes,
+        isNot(contains(SeccionesPanel.catalogo)),
+      );
     });
 
     test('indiceDe marca la sección según la ruta', () {
@@ -151,7 +155,9 @@ void main() {
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull, reason: seccion.ruta);
         expect(find.byType(AdminShell), findsOneWidget);
-        if (seccion != SeccionesPanel.inicio) {
+        if (seccion == SeccionesPanel.catalogo) {
+          expect(find.text('Aún no hay categorías'), findsOneWidget);
+        } else if (seccion != SeccionesPanel.inicio) {
           expect(
             find.textContaining(seccion.textoDisponibilidad),
             findsOneWidget,
