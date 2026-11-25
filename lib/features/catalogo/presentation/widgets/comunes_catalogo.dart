@@ -133,6 +133,7 @@ class BarraFiltros extends StatefulWidget {
     required this.textoInicial,
     required this.onBuscar,
     required this.filtro,
+    this.filtroExtra,
     super.key,
   });
 
@@ -142,6 +143,9 @@ class BarraFiltros extends StatefulWidget {
 
   /// Normalmente un `CfSelect` con el estado.
   final Widget filtro;
+
+  /// Filtro adicional opcional (por ejemplo, la categoría).
+  final Widget? filtroExtra;
 
   static const espera = Duration(milliseconds: 400);
   static const claveBuscador = ValueKey('catalogo-buscador');
@@ -186,11 +190,13 @@ class _BarraFiltrosState extends State<BarraFiltros> {
     );
     return LayoutBuilder(
       builder: (context, restricciones) {
-        if (restricciones.maxWidth < 560) {
+        final extra = widget.filtroExtra;
+        if (restricciones.maxWidth < (extra == null ? 560 : 760)) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               buscador,
+              if (extra != null) ...[SizedBox(height: tokens.espacioMd), extra],
               SizedBox(height: tokens.espacioMd),
               widget.filtro,
             ],
@@ -200,6 +206,10 @@ class _BarraFiltrosState extends State<BarraFiltros> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(child: buscador),
+            if (extra != null) ...[
+              SizedBox(width: tokens.espacioMd),
+              SizedBox(width: 240, child: extra),
+            ],
             SizedBox(width: tokens.espacioMd),
             SizedBox(width: 220, child: widget.filtro),
           ],
