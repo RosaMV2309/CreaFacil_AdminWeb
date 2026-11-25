@@ -148,7 +148,7 @@ común, hay que replicarlo en el otro repositorio en su propia rama y PR.
 ## Gestión del catálogo (categorías y materiales)
 
 Fase 2 · subfase 2.4a (RF-22, RF-05, RF-08). La sección **Catálogo** (`/catalogo`) tiene tres
-pestañas: **Categorías**, **Materiales** y **Servicios** (esta última llega en la subfase 2.4b).
+pestañas: **Categorías**, **Materiales** y **Servicios** (con sus fotos; ver la sección siguiente).
 
 API consumida (todas exigen el token de la administradora):
 
@@ -183,6 +183,68 @@ Arquitectura: `features/catalogo/{domain,data,presentation}` con Riverpod (`filt
 nuevos en `lib/core/design_system/`: `CfDataTable` (estados de carga, vacío y error, paginación y vista
 de tarjetas en pantallas estrechas), `CfDialog`, `CfSelect`, `CfTabs` y `CfTextarea`. **Por ahora solo
 existen en este repositorio**; se sincronizarán con CreaFacil_Frontend en la subfase 2.5.
+
+## Gestión del catálogo (servicios y fotos)
+
+Fase 2 · subfase 2.4b (RF-22, RF-05, RF-04). Pestaña **Servicios** de la sección **Catálogo**.
+
+API consumida (todas exigen el token de la administradora):
+
+| Acción | Petición |
+|---|---|
+| Listar (paginado, 20 por página) | `GET /admin/servicios?pagina=&porPagina=&q=&categoriaId=&activo=` |
+| Ficha completa (para editar y ver las fotos) | `GET /admin/servicios/:id` |
+| Crear / editar / activar o desactivar | `POST /admin/servicios` · `PATCH /admin/servicios/:id` |
+| Subir una foto (`multipart/form-data`, campo `foto`) | `POST /admin/servicios/:id/fotos` |
+| Cambiar el orden (todos los ids) | `PATCH /admin/servicios/:id/fotos/orden` |
+| Borrar una foto | `DELETE /admin/servicios/:id/fotos/:fotoId` |
+
+**Tabla.** Miniatura de la portada, nombre, categoría (con la etiqueta «Categoría inactiva: no se ve en el
+catálogo» si su categoría está desactivada), precio referencial («Desde $ 120,50» o «—»), número de fotos
+(«2 de 8»), estado y acciones (**Editar**, **Fotos**, **Activar/Desactivar**). Buscador, filtro por categoría
+(las inactivas aparecen marcadas) y filtro por estado. En pantallas estrechas, la tabla se ve como tarjetas.
+
+**Formulario** (en un `CfDialog`, como en categorías y materiales, para no perder la tabla de vista):
+
+- Categoría (obligatoria; si se elige una inactiva, se avisa de que el servicio no se verá), nombre (2–120),
+  descripción (≤ 2000), dimensiones orientativas (≤ 200), observaciones (≤ 1000) y precio referencial
+  **opcional** (mismas reglas que el precio de los materiales; viaja como texto, `"120.50"`; vacío = sin precio).
+- **Materiales habituales**: lista de casillas con los materiales activos. Los que el servicio ya tenía y
+  ahora están desactivados aparecen marcados con «inactivo» y se conservan (el servidor no deja añadir
+  materiales desactivados nuevos). `materialIds` reemplaza la lista completa.
+- Al editar se envía **solo lo que cambió** (un campo vaciado se envía como `null`). 400 en su campo; 409
+  (nombre repetido **dentro de la categoría**) y 404, en un `CfMessage`. Sin envíos dobles.
+- **Activar y desactivar piden confirmación.** No existe el borrado de servicios (RF-05).
+
+**Fotos** (diálogo «Fotos del servicio»):
+
+- **Subir** con el selector de archivos del navegador (`file_picker`). Antes de enviar se comprueban la
+  extensión (JPG, PNG o WebP) y el tamaño (≤ 5 MB); el servidor valida además el **contenido real**. Se
+  envía con Dio (`FormData`, campo `foto`, nombre del archivo y `contentType` según la extensión) y se
+  muestra una **barra de progreso**. Errores del servidor: 400 (no es una imagen válida), 413 (más de
+  5 MB) y 409 (máximo de 8 fotos), con su mensaje.
+- **Cuadrícula** de miniaturas; la primera lleva la etiqueta **Portada** (es la que se ve en el catálogo).
+- **Ordenar** con los botones **Mover a la izquierda**, **Mover a la derecha** y **Usar como portada**. Se
+  eligieron botones en lugar de arrastrar y soltar porque funcionan con teclado y lector de pantalla y
+  son más fiables en pantallas táctiles. Se envía el orden completo y se muestra el que devuelve el servidor.
+- **Borrar** con confirmación (si es la portada, se avisa de que la siguiente pasa a serlo).
+- Con **8 fotos**, «Subir foto» se desactiva y se explica el motivo.
+- Las URL de las fotos son absolutas y se cargan sin token (en web, si el navegador no deja leer la
+  imagen, se usa un elemento `<img>`).
+
+Arquitectura: `features/catalogo/domain/servicios.dart` (entidades, `DatosServicio.cambiosRespectoA`,
+`ValidacionesServicio`, contrato `ServiciosRepository`), `data/` (`ServiciosRepositoryImpl`) y
+`presentation/` (`servicios_providers.dart`: `filtroServiciosProvider`, `serviciosControllerProvider`,
+`opcionesCategoriasProvider`, `materialesActivosProvider` y `fotosServicioProvider(id)`; `servicios_tab.dart`,
+`widgets/formulario_servicio.dart` y `widgets/fotos_servicio.dart`). El selector de archivos está detrás de
+la interfaz `SelectorArchivos` (`core/archivos/`) para poder simularlo en las pruebas.
+
+Componentes nuevos en `lib/core/design_system/` (también en `/dev/componentes`): `CfFileUpload` (zona de
+carga con ayuda, motivo de deshabilitado y barra de progreso), `CfGalleria` y `CfMiniatura` (cuadrícula
+de imágenes con insignia y acciones; imagen con marcador mientras carga o si falla) y `CfMultiSelect`
+(selección múltiple con casillas). `CfSelect` admite ahora `hint`, `validator` y `errorText`, y
+`ApiClient.post` admite `alEnviar` (progreso del envío). **Pendientes de sincronizar con
+CreaFacil_Frontend en la subfase 2.5.**
 
 ## Identidad visual
 
