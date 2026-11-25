@@ -80,11 +80,17 @@ class _FormularioMaterialState extends ConsumerState<FormularioMaterial> {
     if (_guardando) {
       return;
     }
+    final habiaErrores = _errores.isNotEmpty;
     setState(() {
       _errores = const {};
       _aviso = null;
     });
-    if (!(_formulario.currentState?.validate() ?? false)) {
+    // Los errores del servidor se muestran con forceErrorText: hay que
+    // esperar a que desaparezcan antes de validar, o validate() fallaría.
+    if (habiaErrores) {
+      await WidgetsBinding.instance.endOfFrame;
+    }
+    if (!mounted || !(_formulario.currentState?.validate() ?? false)) {
       return;
     }
     final datos = DatosMaterial(
